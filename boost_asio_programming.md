@@ -562,17 +562,35 @@ private:
     }
 
     void start_accept() {
-        auto new_connection = std::make_shared<boost::asio::ip::tcp::socket>(io_context_); // socket
+        acceptor_.async_accept(net::make_strand(io_context_),
+            [this](beast::error_code error, tcp::socket socket) {
+            if (!error) {
+                std::cout << "New connection established." << std::endl;
+                handle_accept(error, socket);
+            } else {
+                std::cerr << "Accept failed: " << error.message() << std::endl;
+            }
+            start_accept(); // Continue accepting new connections
+            });
+
+        /* Old version
+        // socket
+        auto new_connection = std::make_shared<boost::asio::ip::tcp::socket>(io_context_);
+        // strand
+        auto strand = boost::asio::make_strand(io_context_);
+
         acceptor_.async_accept(*new_connection,
-            [this, new_connection](const boost::system::error_code& error) {
+            [this, new_connection, strand](const boost::system::error_code& error) {
                 if (!error) {
                     std::cout << "New connection established." << std::endl;
+                    new_connection->start(strand);
                     handle_accept(error, new_connection);
                 } else {
                     std::cerr << "Accept failed: " << error.message() << std::endl;
                 }
                 start_accept(); // Continue accepting new connections
             });
+        */
     }
 
     boost::asio::io_context io_context_;
