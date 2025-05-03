@@ -163,6 +163,10 @@ int main() {
     return 0;
 }
 ```
+Understanding io_context::run() Behavior:
+- The io_context::run() method blocks the calling thread and processes asynchronous operations until there are no more handlers to execute. If there are no pending asynchronous operations, run() will return immediately. This behavior is suitable for applications that are designed to process asynchronous events continuously.
+Role of executor_work_guard:
+- An executor_work_guard is used to prevent io_context::run() from returning when there are no pending asynchronous operations. It achieves this by informing the io_context that there is still work to be done, even if no tasks are currently posted. This is particularly useful in scenarios where you want to keep the io_context running in the background, such as in server applications that may have periods of inactivity.
 
 ## asio::require
 Another way to release work and end the program 
@@ -530,20 +534,6 @@ public:
     }
 
 private:
-    void start_accept() {
-        auto new_connection = std::make_shared<boost::asio::ip::tcp::socket>(io_context_); // socket
-        acceptor_.async_accept(*new_connection,
-            [this, new_connection](const boost::system::error_code& error) {
-                if (!error) {
-                    std::cout << "New connection established." << std::endl;
-                    handle_accept(error, new_connection);
-                } else {
-                    std::cerr << "Accept failed: " << error.message() << std::endl;
-                }
-                start_accept(); // Continue accepting new connections
-            });
-    }
-
     void handle_read(const boost::system::error_code& error, std::size_t bytes_transferred,
                     std::shared_ptr<boost::asio::ip::tcp::socket> socket) {
         if (!error) {
@@ -569,6 +559,20 @@ private:
         } else {
             std::cerr << "Accept failed: " << error.message() << std::endl;
         }
+    }
+
+    void start_accept() {
+        auto new_connection = std::make_shared<boost::asio::ip::tcp::socket>(io_context_); // socket
+        acceptor_.async_accept(*new_connection,
+            [this, new_connection](const boost::system::error_code& error) {
+                if (!error) {
+                    std::cout << "New connection established." << std::endl;
+                    handle_accept(error, new_connection);
+                } else {
+                    std::cerr << "Accept failed: " << error.message() << std::endl;
+                }
+                start_accept(); // Continue accepting new connections
+            });
     }
 
     boost::asio::io_context io_context_;
