@@ -14,6 +14,9 @@ No — not by default. Each process gets its own copy, even if the code is ident
 - Processes don't share memory unless you're using shared memory (shm) or inter-process communication (IPC).
 - A boost::asio::io_context lives in memory — so unless you're specifically sharing it using shared memory mechanisms, each process gets its own.
 
+## Interesting question: Can A Processes create mulltiple io_context?
+Yes - creating multiple instances of boost::asio::io_context within the same program is valid and supported by Boost.Asio. Each io_context operates independently, managing its own asynchronous operations and event loop. This allows for concurrent handling of different I/O tasks across multiple contexts.​
+
 ## Interesting question: Does io_context.run() Wait for One Callback to Finish?
 Yes - boost::asio::io_context is synchronous in how it dispatches callbacks.
 ```C++
