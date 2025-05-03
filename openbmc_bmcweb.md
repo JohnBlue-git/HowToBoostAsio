@@ -65,5 +65,3 @@ bmcweb/src/dbus_utility.cpp
                                       objectPath, interface,
                                       std::move(callback));
 ```
-
-
