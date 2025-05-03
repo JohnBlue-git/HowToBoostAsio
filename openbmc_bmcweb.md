@@ -51,6 +51,25 @@ bmcweb/http/http_server.hpp
         }
     }
 ```
+However, in the original source code, the asynchronous accept operations are initiated without wrapping the completion handlers in a strand. This means that if afterAccept is invoked concurrently from multiple threads, it could lead to race conditions when accessing shared resources (socket).​
+\
+Recommended Approach with strand
+```c++
+void doAccept()
+{
+    SocketPtr socket = std::make_unique<Adaptor>(getIoContext());
+    Adaptor* socketPtr = socket.get();
+    for (Acceptor& accept : acceptors)
+    {
+        auto strand = boost::asio::make_strand(getIoContext());
+        accept.acceptor.async_accept(
+            *socketPtr,
+            boost::asio::bind_executor(strand,
+                std::bind_front(&self_t::afterAccept, this, std::move(socket),
+                                accept.httpType)));
+    }
+}
+```
 
 ## How io_context relete to DBus handling
 bmcweb/src/webserver_run.cpp
