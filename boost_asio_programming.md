@@ -125,7 +125,7 @@ int main() {
 }
 ```
 
-## work guard
+## Work Guard
 Use work guard to keep program alive until KILL
 - Can use work guard to prevent io_context from exiting immediately
 - work.reset();: After releasing the work object, the io_context is allowed to exit once all asynchronous work is completed, including the timer task.
@@ -205,6 +205,31 @@ int main() {
 
     return 0;
 }
+```
+
+## boost::asio::make_strand(io_context)
+- What is strand ?
+  - A strand is a wrapper around the `io_context`'s executor that ensures handlers execute sequentially within the strand, avoiding race conditions.
+  - Instead of directly assigning tasks to `io_context`, they go through the strand, ensuring exclusive execution.
+- Thread Safety Without Explicit Locks
+  - If multiple handlers are posted via `strand.post()`, `strand.dispatch()`, or `strand.defer()`, they will execute **one at a time** in the order they were submitted.
+  - This eliminates the need for explicit locking mechanisms when accessing shared resources.
+- Using `make_strand(io_context)` vs. Direct `io_context.get_executor()
+  - `io_context.get_executor()` provides a basic executor that doesn’t enforce thread-safe execution order.
+  - `make_strand(io_context)` ensures that execution is strictly serialized within that strand.
+\
+Even if multiple threads are running `io.run()`, these handlers will **never** execute concurrently, thanks to the strand.
+```c++
+boost::asio::io_context io;
+auto strand = boost::asio::make_strand(io);  // Creates a strand for serialized execution
+
+boost::asio::post(strand, []() {
+    std::cout << "Handler 1 (executing safely)" << std::endl;
+});
+
+boost::asio::post(strand, []() {
+    std::cout << "Handler 2 (executing safely)" << std::endl;
+});
 ```
 
 # Boost.Asio desgin
