@@ -54,6 +54,8 @@ bmcweb/http/http_server.hpp
 However, in the original source code, the asynchronous accept operations are initiated without wrapping the completion handlers in a strand. This means that if afterAccept is invoked concurrently from multiple threads, it could lead to race conditions when accessing shared resources (socket).​
 \
 Recommended Approach with strand
+\
+(caution: getIoContext() have to be revised for the entire project, the following are just example usage of strand)
 ```c++
 void doAccept()
 {
