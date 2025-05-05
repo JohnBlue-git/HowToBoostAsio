@@ -57,16 +57,19 @@ Recommended Approach with strand
 ```c++
 void doAccept()
 {
-    SocketPtr socket = std::make_unique<Adaptor>(getIoContext());
+    auto strand = boost::asio::make_strand(getIoContext());
+    SocketPtr socket = std::make_unique<Adaptor>(strand);
+
+    // Keep a raw pointer so when the socket is moved, the pointer remains valid
     Adaptor* socketPtr = socket.get();
+
     for (Acceptor& accept : acceptors)
     {
-        auto strand = boost::asio::make_strand(getIoContext());
         accept.acceptor.async_accept(
             *socketPtr,
-            boost::asio::bind_executor(strand,
-                std::bind_front(&self_t::afterAccept, this, std::move(socket),
-                                accept.httpType)));
+            boost::asio::bind_executor(
+                strand, 
+                std::bind_front(&self_t::afterAccept, this, std::move(socket), accept.httpType)));
     }
 }
 ```
