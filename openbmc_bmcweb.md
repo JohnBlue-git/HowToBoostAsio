@@ -97,7 +97,7 @@ void doAccept()
     }
 }
 ```
-The global way to make_strand() io_context is to replace getIoContext() with getStrand().
+Though not a must, the global way to make_strand() of io_context is to replace getIoContext() with getStrand() as the following code.
 \
 But it is still based on the verion of BOOST library, because older version didn't support boost::asio::make_strand().
 ```console
@@ -108,19 +108,6 @@ inline boost::asio::strand<boost::asio::io_context::executor_type> getStrand()
     return strand;
 }
 ```
-Look deeper to Multiple Strands VS Global Strands
-- Multiple Strands from the Same `io_context`
-  - This is a common approach when different parts of your application need their own serialization guarantees.
-  - Each strand ensures that handlers associated with it execute without concurrent overlap, even if other handlers (from different strands) are running in parallel.
-- Using a Global Strand
-  - A single strand shared across multiple parts of your application ensures strict sequential execution of all handlers using it.
-  - If your entire codebase needs to serialize operations that must never run in parallel, a global strand makes sense.
-  - However, overusing a single strand might introduce bottlenecks if tasks don’t truly require strict sequencing.
-- Best Practice
-  - **Use multiple strands for different components** that need local thread-safety.
-    - Like the cases to requesting DBUS
-  - **Avoid a global strand unless truly required**, because it may serialize operations unnecessarily and limit performance.
-  - If multiple handlers belong to the same logical group (like managing a shared resource), use a **dedicated strand** for that group.
 
 ## How io_context relete to DBus handling
 bmcweb/src/webserver_run.cpp
