@@ -42,7 +42,7 @@ int run()
 ...
 
     app.run();
-    // io->run();
+
     // Run the io_context in the thread pool
     boost::asio::thread_pool pool(2);
     boost::asio::post(pool, [io](){ io->run(); });
