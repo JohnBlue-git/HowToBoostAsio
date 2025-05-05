@@ -207,7 +207,7 @@ int main() {
 }
 ```
 
-## boost::asio::make_strand(io_context)
+## Strand
 - What is strand ?
   - A strand is a wrapper around the `io_context`'s executor that ensures handlers execute sequentially within the strand, avoiding race conditions.
   - Instead of directly assigning tasks to `io_context`, they go through the strand, ensuring exclusive execution.
@@ -221,7 +221,11 @@ int main() {
 Even if multiple threads are running `io.run()`, these handlers will **never** execute concurrently, thanks to the strand.
 ```c++
 boost::asio::io_context io;
+// make strand
 auto strand = boost::asio::make_strand(io);  // Creates a strand for serialized execution
+
+// strand
+// boost::asio::strand<boost::asio::io_context::executor_type> strand1(io.get_executor());
 
 boost::asio::post(strand, []() {
     std::cout << "Handler 1 (executing safely)" << std::endl;
@@ -231,6 +235,19 @@ boost::asio::post(strand, []() {
     std::cout << "Handler 2 (executing safely)" << std::endl;
 });
 ```
+Multiple Strands VS Global Strands
+- Multiple Strands from the Same `io_context`
+  - This is a common approach when different parts of your application need their own serialization guarantees.
+  - Each strand ensures that handlers associated with it execute without concurrent overlap, even if other handlers (from different strands) are running in parallel.
+- Using a Global Strand
+  - A single strand shared across multiple parts of your application ensures strict sequential execution of all handlers using it.
+  - If your entire codebase needs to serialize operations that must never run in parallel, a global strand makes sense.
+  - However, overusing a single strand might introduce bottlenecks if tasks don’t truly require strict sequencing.
+- Best Practice
+  - **Use multiple strands for different components** that need local thread-safety.
+    - Like the cases to requesting DBUS in bmcweb project
+  - **Avoid a global strand unless truly required**, because it may serialize operations unnecessarily and limit performance.
+  - If multiple handlers belong to the same logical group (like managing a shared resource), use a **dedicated strand** for that group.
 
 # Boost.Asio desgin
 
