@@ -97,7 +97,7 @@ void doAccept()
     }
 }
 ```
-The better way to make_strand() io_context is to replace getIoContext() with getStrand().
+The global way to make_strand() io_context is to replace getIoContext() with getStrand().
 \
 But it is still based on the verion of BOOST library, because older version didn't support boost::asio::make_strand().
 ```console
@@ -108,6 +108,19 @@ inline boost::asio::strand<boost::asio::io_context::executor_type> getStrand()
     return strand;
 }
 ```
+Look deeper to Multiple Strands VS Global Strands
+- Multiple Strands from the Same `io_context`
+  - This is a common approach when different parts of your application need their own serialization guarantees.
+  - Each strand ensures that handlers associated with it execute without concurrent overlap, even if other handlers (from different strands) are running in parallel.
+- Using a Global Strand
+  - A single strand shared across multiple parts of your application ensures strict sequential execution of all handlers using it.
+  - If your entire codebase needs to serialize operations that must never run in parallel, a global strand makes sense.
+  - However, overusing a single strand might introduce bottlenecks if tasks don’t truly require strict sequencing.
+- Best Practice
+  - **Use multiple strands for different components** that need local thread-safety.
+    - Like the cases to requesting DBUS
+  - **Avoid a global strand unless truly required**, because it may serialize operations unnecessarily and limit performance.
+  - If multiple handlers belong to the same logical group (like managing a shared resource), use a **dedicated strand** for that group.
 
 ## How io_context relete to DBus handling
 bmcweb/src/webserver_run.cpp
@@ -122,3 +135,10 @@ bmcweb/src/dbus_utility.cpp
                                       objectPath, interface,
                                       std::move(callback));
 ```
+
+## Look deeper on how boost::asio::strand is used in `sdbusplus`
+In the implementation of sdbusplus::asio::connection, asynchronous operations such as async_send and async_method_call_timed are initiated using boost::asio::bind_executor. This function binds the completion handlers to a specific executor, which is typically a boost::asio::strand. By binding handlers to a strand, the library ensures that these handlers are executed serially, even if they are posted from multiple threads. (include/sdbusplus/asio/connection.hpp - openbmc/sdbusplus - Gitiles). This approach effectively serializes the execution of handlers, preventing concurrent access to shared resources and ensuring thread safety in asynchronous operations.
+
+## Look deeper on multi-threading c onsiderations in `sdbusplus`
+While sdbusplus::asio::connection provides thread safety for individual asynchronous operations, it's important to note that the underlying DBus connection (sd_bus) is not inherently thread-safe. Therefore, when using multiple threads, each thread should operate on its own sdbusplus::asio::connection instance to avoid undefined behavior.
+In summary, sdbusplus::asio::connection leverages boost::asio::strand to ensure thread-safe execution of asynchronous DBus operations, making it suitable for multi-threaded applications with proper instance management.
