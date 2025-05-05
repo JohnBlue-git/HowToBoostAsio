@@ -32,6 +32,28 @@ int run()
     return 0;
 }
 ```
+It is possible to use a pretty way to improve it
+```c++
+int run()
+{
+    auto io = std::make_shared<boost::asio::io_context>();
+    App app(io);
+
+...
+
+    app.run();
+    // io->run();
+    // Run the io_context in the thread pool
+    boost::asio::thread_pool pool(2);
+    boost::asio::post(pool, [io](){ io->run(); });
+    boost::asio::post(pool, [io](){ io->run(); });
+    pool.join();
+
+    crow::connections::systemBus = nullptr;
+
+    return 0;
+}
+```
 
 ## How io_context relete to HTTP handling
 bmcweb/http/http_server.hpp
