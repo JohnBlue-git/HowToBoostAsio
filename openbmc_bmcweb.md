@@ -97,6 +97,17 @@ void doAccept()
     }
 }
 ```
+The better way to make_strand() io_context is to replace getIoContext() with getStrand().
+\
+But it is still based on the verion of BOOST library, because older version didn't support boost::asio::make_strand().
+```console
+inline boost::asio::strand<boost::asio::io_context::executor_type> getStrand()
+{
+    static boost::asio::io_context io;
+    static boost::asio::strand<boost::asio::io_context::executor_type> strand(io.get_executor());
+    return strand;
+}
+```
 
 ## How io_context relete to DBus handling
 bmcweb/src/webserver_run.cpp
